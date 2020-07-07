@@ -1,0 +1,28 @@
+{
+  "name": "@iljucha/mango",
+  "version": "1.0.0",
+  "description": "simple in memory db",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iljucha/mango.git"
+  },
+  "keywords": [
+    "db",
+    "collection",
+    "in-memory"
+  ],
+  "dependencies": {
+    "@iljucha/cbor": "1.0.0"
+  },
+  "author": "Ilja Bituzki",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iljucha/mango/issues"
+  },
+  "homepage": "https://github.com/iljucha/mango#readme"
+}
