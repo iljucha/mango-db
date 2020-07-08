@@ -2,17 +2,26 @@
 import CBOR from "@iljucha/cbor"
 import fs from "fs"
 import { ERR, TYPE } from "./constants.js"
-import Connection from "./connection.js"
 import { assert, getType } from "./helpers.js"
 
 /**
- * @typedef {Object.<string, any>} Item
+ * @typedef {{
+ *      error: Error
+ *      db: MangoDB
+ * }} Connection
+ *  * 
+ * @typedef {{
+ *      [property: string]: any
+ * }} Item
+ * 
  * @typedef {{
  *      type: string
  *      minSize?: number
  *      maxSize?: number
  * }} SchemeProperty
+ * 
  * @typedef {Object.<string, any>} Query
+ * 
  * @typedef {{
         name: string
         path: string
@@ -44,7 +53,7 @@ export default class MangoDB {
 
     /**
      * @param {Configuration} cfg
-     * @returns {Promise<Connection>}
+     * @returns {Promise.<Connection>}
      * @example
      * let DB
      * MangoDB.connect(yourConfig)
@@ -68,10 +77,10 @@ export default class MangoDB {
             let db = new MangoDB()
             db.configure(cfg)
             await db.deserialize()
-            return new Connection(null, db)
+            return { error: null, db }
         }
         catch (error) {
-            return new Connection(error, null)
+            return { error, db: null}
         }
     }
 
