@@ -2,7 +2,6 @@
 import CBOR from "@iljucha/cbor"
 import fs from "fs"
 import { ERR, TYPE } from "./constants.js"
-import Result from "./result.js"
 import Connection from "./connection.js"
 import { assert, getType } from "./helpers.js"
 
@@ -244,7 +243,7 @@ export default class MangoDB {
         schemaKeys.map(schemaKey => {
             keyType = value[schemaKey].type
             assert(keyType, ERR.MISS_CFG_TYPE)
-            assert((keyType !== TYPE.OBJ || keyType !== TYPE.ARR) && typeof keyType === TYPE.STR, ERR.TYPE)
+            assert(keyType !== TYPE.OBJ && keyType !== TYPE.ARR && typeof keyType === TYPE.STR, ERR.TYPE)
         })
         this.#schema = value
     }
@@ -302,6 +301,7 @@ export default class MangoDB {
      * find items in an item array
      * @param {Query} query
      * @param {Item[]} items
+     * @return {Promise.<{error: Error, items: Item[]}>}
      * @example
      * let objArr = [
      *      { id: 1, name: "john" },
@@ -318,26 +318,64 @@ export default class MangoDB {
             assert(getType(query) === TYPE.QUERY, ERR.ARG_TYPE)
             assert(Array.isArray(items), ERR.ARG_TYPE)
             const keys = Object.keys(query)
-            const results = items.filter(o => {
-                return keys.every(key => {
-                    if (query[key] === o[key]) {
-                        return true
-                    }
-                    if (query[key] instanceof RegExp && typeof o[key] === TYPE.STR) {
-                        return query[key].test(o[key])
-                    }
-                })
-            })
+            const results = items.filter(item => MangoDB.find(query, item, keys))
             assert(results.length > 0, ERR.NO_ITEMS)
-            return new Result(null, results)
+            return { error: null, items: results }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null }
         }
     }
 
     /**
-     * @param {Item[]} items 
+     * find first item in an item array
+     * @param {Query} query
+     * @param {Item[]} items
+     * @return {Promise.<{error: Error, item: Item}>}
+     * @example
+     * let objArr = [
+     *      { id: 1, name: "john" },
+     *      { id: 2, name: "martina" }
+     * ]
+     * let query = { id: 2, name: "martina" }
+     * MangoDB.findOne(query, objArr)
+     *      .then(res => console.log("found", res.first))
+     *      .catch(res => console.log(res.error))
+     */
+    static async findOne(query, items) {
+        try {
+            assert(arguments.length === 2, ERR.ARGS_LEN)
+            assert(getType(query) === TYPE.QUERY, ERR.ARG_TYPE)
+            assert(Array.isArray(items), ERR.ARG_TYPE)
+            const keys = Object.keys(query)
+            const result = items.find(item => MangoDB.find(query, item, keys))
+            assert(result, ERR.NO_ITEMS)
+            return { error: null, item: result }
+        }
+        catch (error) {
+            return { error, item: null }
+        }
+    }
+
+    /**
+     * @param {Query} query 
+     * @param {Item} item
+     * @param {string[]} keys
+     */
+    static find(query, item, keys) {
+        return keys.every(key => {
+            if (query[key] === item[key]) {
+                return true
+            }
+            if (query[key] instanceof RegExp && typeof item[key] === TYPE.STR) {
+                return query[key].test(item[key])
+            }
+        })
+    }
+
+    /**
+     * @param {Item[]} items
+     * @return {Promise.<{error: Error, items: Item[]}>}
      */
     async test(items) {
         try {
@@ -348,9 +386,10 @@ export default class MangoDB {
                 oKeys.map(key => {
                     property = item[key]
                     sKey = this.schema[key]
+                    assert(sKey, ERR.UKEY)
                     iType = getType(property)
                     sType = sKey.type
-                    assert(iType !== TYPE.OBJ || iType !== TYPE.ARR || sType === iType, ERR.TYPE)
+                    assert(iType !== TYPE.OBJ && iType !== TYPE.ARR && sType === iType, ERR.TYPE)
                     switch (sType) {
                         case TYPE.STR:
                             iSize = property.length
@@ -370,15 +409,16 @@ export default class MangoDB {
                 })
                 return item
             })
-            return new Result(null, items)
+            return { error: null, items }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null}
         }
     }
 
     /**
-     * @param {Item[]} items 
+     * @param {Item[]} items
+     * @return {Promise.<{error: Error, items: Item[]}>}
      * @example
      * DB.insert(item1, item2, ...)
      *      .then(res => console.log("inserted", res.items))
@@ -407,15 +447,16 @@ export default class MangoDB {
             }
             lastStack.push(...res.items)
             const copy = [ ...res.items ]
-            return new Result(null, copy)
+            return { error: null, items: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null }
         }
     }
 
     /**
      * @param {Query} query
+     * @return {Promise.<{error: Error, item: Item}>}
      * @example
      * DB.deleteOne({})
      *      .then(res => console.log("deleted", res.first))
@@ -424,21 +465,23 @@ export default class MangoDB {
     async deleteOne(query) {
         try {
             assert(arguments.length === 1, ERR.ARGS_LEN)
-            let res = await MangoDB.findMany(query, this.#data.flat(1))
+            // @ts-ignore for array.flat
+            let res = await MangoDB.findOne(query, this.#data.flat(1))
             assert(res.error === null, res.error)
-            let { stack, index } = MangoDB.itemIndex(this.#data, res.first)
+            let { stack, index } = MangoDB.itemIndex(this.#data, res.item)
             assert(stack >= 0 && index >= 0, ERR.ITEM_POS)
             this.#data[stack].splice(index, 1)
-            const copy = [ ...res.items ]
-            return new Result(null, copy)
+            const copy = { ...res.item }
+            return { error: null, item: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, item: null }
         }
     }
 
     /**
      * @param {Query} query
+     * @return {Promise.<{error: Error, items: Item[]}>}
      * @example
      * DB.deleteMany({})
      *      .then(res => console.log("deleted", res.items))
@@ -447,6 +490,7 @@ export default class MangoDB {
     async deleteMany(query) {
         try {
             assert(arguments.length === 1, ERR.ARGS_LEN)
+            // @ts-ignore for array.flat
             let res = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             res.items.map(item => {
@@ -455,16 +499,17 @@ export default class MangoDB {
                 this.#data[stack].splice(index, 1)
             })
             const copy = [ ...res.items ]
-            return new Result(null, copy)
+            return { error: null, items: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null }
         }
     }
 
     /**
      * @param {Query} query
      * @param {Item} update
+     * @return {Promise.<{error: Error, item: Item}>}
      * @example
      * DB.updateOne({}, { updated: new Date() })
      *      .then(res => console.log("updated", res.first))
@@ -474,26 +519,28 @@ export default class MangoDB {
         try {
             assert(arguments.length === 2, ERR.ARGS_LEN)
             assert(getType(update) === TYPE.OBJ, ERR.ARG_TYPE)
-            let res1 = await MangoDB.findMany(query, this.#data.flat(1))
+            // @ts-ignore for array.flat
+            let res1 = await MangoDB.findOne(query, this.#data.flat(1))
             assert(res1.error === null, res1.error)
             assert(update["_id"] === undefined, ERR.PK_UP)
-            const mixin = { ...res1.first, ...update }
+            const mixin = { ...res1.item, ...update }
             let res2 = await this.test([mixin])
             assert(res2.error === null, res2.error)
-            let { stack, index } = MangoDB.itemIndex(this.#data, res1.first)
+            let { stack, index } = MangoDB.itemIndex(this.#data, res1.item)
             assert(stack >= 0 && index >= 0, ERR.ITEM_POS)
-            this.#data[stack][index] = res2.first
+            this.#data[stack][index] = res2.items[0]
             const copy = [ ...res2.items ]
-            return new Result(null, copy)
+            return { error: null, item: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, item: null }
         }
     }
 
     /**
      * @param {Query} query
      * @param {Item} update
+     * @return {Promise.<{error: Error, items: Item[]}>}
      * @example
      * DB.updateMany({}, { updated: new Date() })
      *      .then(res => console.log("updated", res.items))
@@ -503,6 +550,7 @@ export default class MangoDB {
         try {
             assert(arguments.length === 2, ERR.ARGS_LEN)
             assert(getType(update) === TYPE.OBJ, ERR.ARG_TYPE)
+            // @ts-ignore for array.flat
             let res1 = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res1.error === null, res1.error)
             assert(update["_id"] === undefined, ERR.PK_UP)
@@ -518,29 +566,52 @@ export default class MangoDB {
                 item2Counter++
             })
             const copy = [ ...res2.items ]
-            return new Result(null, copy)
+            return { error: null, items: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null }
         }
     }
 
     /**
      * @param {Query} query
+     * @return {Promise.<{error: Error, items: Item[]}>}
      * @example
-     * DB.find({})
+     * DB.findMany({})
      *      .then(res => console.log("found", res.items))
      *      .catch(res => console.log(res.error))
      */
-    async find(query) {
+    async findMany(query) {
         try {
+            // @ts-ignore for array.flat
             let res = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             const copy = [ ...res.items ]
-            return new Result(null, copy) 
+            return { error: null, items: copy }
         }
         catch (error) {
-            return new Result(error, null)
+            return { error, items: null }
+        }
+    }
+
+    /**
+     * @param {Query} query
+     * @return {Promise.<{error: Error, item: Item}>}
+     * @example
+     * DB.findOne({})
+     *      .then(res => console.log("found", res.items))
+     *      .catch(res => console.log(res.error))
+     */
+    async findOne(query) {
+        try {
+            // @ts-ignore for array.flat
+            let res = await MangoDB.findOne(query, this.#data.flat(1))
+            assert(res.error === null, res.error)
+            const copy = { ...res.item }
+            return { error: null, item: copy }
+        }
+        catch (error) {
+            return { error, item: null }
         }
     }
 }

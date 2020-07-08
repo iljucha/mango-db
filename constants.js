@@ -17,6 +17,7 @@ ERR.PK_DUPES = "some items have the same primaryKeys"
 ERR.INVALID_ITEM = "invalid type for item"
 ERR.INVALID_QUERY = "invalid type for query"
 ERR.TMI = "too many items"
+ERR.UKEY = "unknown property"
 ERR.SIZE_SMALL = "value size too small"
 ERR.SIZE_BIG = "value size too big"
 
