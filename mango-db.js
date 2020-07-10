@@ -13,7 +13,7 @@ import { assert, getType } from "./helpers.js"
  * @typedef {{
  *      [property: string]: any
  * }} Item
- * 
+ *
  * @typedef {{
  *      type: string
  *      minSize?: number
@@ -474,7 +474,7 @@ export default class MangoDB {
     async deleteOne(query) {
         try {
             assert(arguments.length === 1, ERR.ARGS_LEN)
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res = await MangoDB.findOne(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             let { stack, index } = MangoDB.itemIndex(this.#data, res.item)
@@ -499,7 +499,7 @@ export default class MangoDB {
     async deleteMany(query) {
         try {
             assert(arguments.length === 1, ERR.ARGS_LEN)
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             res.items.map(item => {
@@ -528,7 +528,7 @@ export default class MangoDB {
         try {
             assert(arguments.length === 2, ERR.ARGS_LEN)
             assert(getType(update) === TYPE.OBJ, ERR.ARG_TYPE)
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res1 = await MangoDB.findOne(query, this.#data.flat(1))
             assert(res1.error === null, res1.error)
             assert(update["_id"] === undefined, ERR.PK_UP)
@@ -559,7 +559,7 @@ export default class MangoDB {
         try {
             assert(arguments.length === 2, ERR.ARGS_LEN)
             assert(getType(update) === TYPE.OBJ, ERR.ARG_TYPE)
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res1 = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res1.error === null, res1.error)
             assert(update["_id"] === undefined, ERR.PK_UP)
@@ -592,7 +592,7 @@ export default class MangoDB {
      */
     async findMany(query) {
         try {
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res = await MangoDB.findMany(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             const copy = [ ...res.items ]
@@ -613,7 +613,7 @@ export default class MangoDB {
      */
     async findOne(query) {
         try {
-            // @ts-ignore for array.flat
+            // @ts-ignore
             let res = await MangoDB.findOne(query, this.#data.flat(1))
             assert(res.error === null, res.error)
             const copy = { ...res.item }
