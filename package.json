@@ -1,5 +1,5 @@
 {
-  "name": "@iljucha/mango",
+  "name": "@iljucha/mango-db",
   "version": "1.0.0",
   "description": "simple in memory db",
   "main": "index.js",
@@ -9,20 +9,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iljucha/mango.git"
+    "url": "git+https://github.com/iljucha/mango-db.git"
   },
   "keywords": [
     "db",
     "collection",
-    "in-memory"
+    "in-memory",
+    "persistent"
   ],
   "dependencies": {
-    "@iljucha/cbor": "1.0.0"
+    "@iljucha/cbor": "1.0.1"
   },
   "author": "Ilja Bituzki",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/iljucha/mango/issues"
+    "url": "https://github.com/iljucha/mango-db/issues"
   },
-  "homepage": "https://github.com/iljucha/mango#readme"
+  "homepage": "https://github.com/iljucha/mango-db#readme"
 }
