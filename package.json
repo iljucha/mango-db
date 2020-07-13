@@ -1,29 +1,59 @@
 {
-  "name": "@iljucha/mango-db",
-  "version": "1.0.0",
+  "_from": "@iljucha/mango-db@1.0.13",
+  "_id": "@iljucha/mango-db@1.0.13",
+  "_inBundle": false,
+  "_integrity": "sha512-/aqixQmt+iK8QbHtmKHQbUk5zrVMqKOEHpN5ZiVn5P0tLKcBY2+OyP32ykQmEShDrr1LPxIxPfOVrww9OJqIlw==",
+  "_location": "/@iljucha/mango-db",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "@iljucha/mango-db@1.0.13",
+    "name": "@iljucha/mango-db",
+    "escapedName": "@iljucha%2fmango-db",
+    "scope": "@iljucha",
+    "rawSpec": "1.0.13",
+    "saveSpec": null,
+    "fetchSpec": "1.0.13"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/@iljucha/mango-db/-/mango-db-1.0.13.tgz",
+  "_shasum": "2dbba29f35e310785ab637fb4389cacbde201a16",
+  "_spec": "@iljucha/mango-db@1.0.13",
+  "_where": "/home/ilja/Projekte/iljushka",
+  "author": {
+    "name": "Ilja Bituzki"
+  },
+  "bugs": {
+    "url": "https://github.com/iljucha/mango-db/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {
+    "@iljucha/cbor": "1.0.2",
+    "@iljucha/festival": "1.0.2"
+  },
+  "deprecated": false,
   "description": "simple in memory db",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/iljucha/mango-db.git"
-  },
+  "homepage": "https://github.com/iljucha/mango-db#readme",
   "keywords": [
     "db",
     "collection",
     "in-memory",
     "persistent"
   ],
-  "dependencies": {
-    "@iljucha/cbor": "1.0.1"
-  },
-  "author": "Ilja Bituzki",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/iljucha/mango-db/issues"
+  "main": "index.js",
+  "name": "@iljucha/mango-db",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iljucha/mango-db.git"
   },
-  "homepage": "https://github.com/iljucha/mango-db#readme"
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "version": "1.0.13"
 }
