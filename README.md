@@ -33,6 +33,7 @@ const postsConfig = {
         }
     }
 }
+DB.configure(postsConfig)
 
 // also possible with setters:
 let DB = new MangoDB()
@@ -73,7 +74,7 @@ let Query = {
 }
 
 // Very weird Query, matches all item in $or
-let Query2 = {
+Query = {
     $or: [
         { _id: { $regexp: /findme/i } }, // regexp.test(...)
         { _id: { $includes: "substring"} }, // str.includes(...)
@@ -91,15 +92,15 @@ let Query2 = {
 }
 
 // Complex Query
-let Query3 = {
-    _id: "wA357Fr3bv2bYfWKLxQmwIM8GogEOCOy",
+Query = {
     $or: [
-        { title: { $regexp: /bad word/i } },
-        { text: { $regexp: /bad word/i } }
+        { _id: "wA357Fr3bv2bYfWKLxQmwIM8GogEOCOy" },
+        { alias: { $regexp: /iljucha/i } },
+        { name: { $includes: /ilj/i } }
     ],
     $and: [
-        { userAlias: { $nin: ["user1", "user2"] } },
-        { userAlias: { $includes: "frank" } }
+        { status: { $nin: ["banned", "kicked"] } },
+        { auth: { $eq: "admin" } }
     ]
 }
 ```
@@ -109,8 +110,19 @@ You can join Items from other MangoDBs.
 ```javascript
 let DB1 = new MangoDB()
 let DB2 = new MangoDB()
-DB1.find()
-    .join({ finder: DB2.find(), where: ["fk_db1", "_id"] [, as: "db1_join" ]}) // !as = joins on where[0]
+let DB3 = new MangoDB()
+DB1.find({ _user: 1 })
+    .limit(100)
+    .skip(20)
+    .join({
+        cursor: DB2.find({ _id: 1 }).limit(1).join({
+            cursor: DB3.find({ _user: 1 }).reverse().limit(1),
+            where: ["fk_db2", "_id"],
+            as: "db2_join"
+        }),
+        where: ["fk_db1", "_id"],
+        as: "db1_join"
+    })
     .toArray()
     .then(items => console.log(items))
 ```
