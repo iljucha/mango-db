@@ -7,8 +7,8 @@
   },
   "bundleDependencies": false,
   "dependencies": {
-    "@iljucha/cbor": "1.0.7",
-    "@iljucha/festival": "1.0.4"
+    "@iljucha/cbor": "1.0.10",
+    "@iljucha/festival": "1.0.8"
   },
   "deprecated": false,
   "description": "simple in memory db",
@@ -20,7 +20,7 @@
     "persistent"
   ],
   "license": "ISC",
-  "main": "index.js",
+  "main": "src/index.js",
   "name": "@iljucha/mango-db",
   "repository": {
     "type": "git",
@@ -30,5 +30,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
-  "version": "1.5.14"
+  "version": "1.5.19"
 }
