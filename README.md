@@ -2,7 +2,7 @@
 Simple in-memory (with option to serialize) MongoDB parody.
 
 # Usage
-## Creation and Connection
+## Creation
 ```javascript
 import MangoDB from "@iljucha/mango-db"
 import VUID from "@iljucha/vuid" // ID generator
@@ -112,11 +112,9 @@ let DB1 = new MangoDB()
 let DB2 = new MangoDB()
 let DB3 = new MangoDB()
 DB1.find({ _user: 1 })
-    .limit(100)
-    .skip(20)
     .join({
-        cursor: DB2.find({ _id: 1 }).limit(1).join({
-            cursor: DB3.find({ _user: 1 }).reverse().limit(1),
+        cursor: DB2.find({ _id: 1 }).join({
+            cursor: DB3.find({ _user: 1 }).reverse(),
             where: ["fk_db2", "_id"],
             as: "db2_join"
         }),
@@ -124,10 +122,29 @@ DB1.find({ _user: 1 })
         as: "db1_join"
     })
     .toArray()
-    .then(items => console.log(items))
 ```
 
-### Insert
+### Project
+You can explicitly show or hide item fields.
+```javascript
+let DB1 = new MangoDB()
+let DB2 = new MangoDB()
+DB1.find({ _user: 1 })
+    .project({ 
+        _id: {
+            $alias: "post" // rename "_id" to "post"
+        },
+        "db1_join._id": false // hide joined items "_id"
+    }) 
+    .join({
+        cursor: DB2.find(),
+        where: ["fk_db1", "_id"],
+        as: "db1_join"
+    })
+    .toArray()
+```
+
+## Insert
 ```javascript
 let items = [
     {
@@ -177,7 +194,11 @@ DB.updateMany({ }, { title: "we all have now the same title :(" })
 DB.find({ text: { $regexp: /hello/i }})
     .limit(1000)
     .skip(10)
-    .reverse()
+    .reverse(true)
+    // to Promise<Item[]>
     .toArray()
-    .then(items => console.log(items))
+    // to Promise<Item>
+    .single(0 /** index */)
+    // Promise<callbackfn<forEach>>
+    .each(item => console.log(item))
 ```
