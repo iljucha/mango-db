@@ -1,20 +1,20 @@
 // @ts-check
 import { ERR, TYPE } from "./constants.js"
-import { getType, assert } from "./methods.js"
+import { getType, assert, find } from "./methods.js"
 import { serialize, deserialize } from "./stream.js"
 import Festival from "@iljucha/festival"
 import Cursor from "./cursor.js"
 import { Schema } from "./schema.js"
 
 /**
- * @typedef {import("@iljucha/mango-db/lib/types").SchemeProperties} SchemeProperties
- * @typedef {import("@iljucha/mango-db/lib/types").Item} Item
- * @typedef {import("@iljucha/mango-db/lib/types").Configuration} Configuration
- * @typedef {import("@iljucha/mango-db/lib/types").Query} Query
- * @typedef {import("@iljucha/mango-db/lib/types").Result} Result
- * @typedef {import("@iljucha/mango-db/lib/types").Results} Results
- * @typedef {import("@iljucha/mango-db/lib/types").EventHandler} EventHandler
- * @typedef {import("@iljucha/mango-db/lib/types").CursorOptions} CursorOptions
+ * @typedef {import("./types").SchemeProperties} SchemeProperties
+ * @typedef {import("./types").Item} Item
+ * @typedef {import("./types").Configuration} Configuration
+ * @typedef {import("./types").Query} Query
+ * @typedef {import("./types").Result} Result
+ * @typedef {import("./types").Results} Results
+ * @typedef {import("./types").EventHandler} EventHandler
+ * @typedef {import("./types").CursorOptions} CursorOptions
  */
 
 export default class MangoDB {
@@ -146,9 +146,9 @@ export default class MangoDB {
      */
     async insert(...items) {
         try {
-            let iKeys = [], iType
+            let _ids = this.#data.map(item => item._id)
+            let iKeys = [ ..._ids ]
             items = items.map((item) => {
-                iType = getType(item)
                 item = { ...this.#schema.defaults, ...item }
                 assert(item["_id"], ERR.MISS_PK)
                 iKeys.push(item["_id"])

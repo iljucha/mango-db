@@ -1,10 +1,12 @@
 // @ts-check
-import { find } from "./methods.js"
+import { find, project } from "./methods.js"
 
 /**
- * @typedef {import("@iljucha/mango-db/lib/types").Join} Join
- * @typedef {import("@iljucha/mango-db/lib/types").Query} Query
- * @typedef {import("@iljucha/mango-db/lib/types").Item} Item
+ * @typedef {import("./types").Join} Join
+ * @typedef {import("./types").Query} Query
+ * @typedef {import("./types").Item} Item
+ * @typedef {import("./types").Projection} Projection
+ * @typedef {import("./types").CursorOptions} CursorOptions
  */
 
 export default class Cursor {
@@ -14,57 +16,46 @@ export default class Cursor {
     #results = []
     /** @type {Query} */
     #query = {}
-    #skip = 0
-    #limit = Infinity
     /** @type {Join[]} */
     #joins = []
-    #reverse = false
+    /** @type {Projection} */
+    #projection = {}
     /** @type {Item[]} */
     #joinedResults = []
+    /** @type {CursorOptions} */
+    #cursorOptions = {
+        $skip: 0,
+        $limit: Infinity,
+        $reverse: false
+    }
 
     /**
-     * @public
-     * @param {Query} [query] 
+     * @param {Query} query
      * @param {Item[]} items 
      */
     constructor(query, items) {
-        this.#query = query || {}
+        this.#query = query
         this.#items = items
     }
 
     /**
-     * @public
-     * @param {Query} [query] 
+     * @param {Query} query
      */
     query(query) {
-        this.#query = query || {}
+        this.#query = query 
         return this
     }
 
     /**
-     * @public
-     * @param {Query} [query] 
+     * @param {Query} query
      */
     mixQuery(query) {
-        this.#query = { ...this.#query, ...query || {} }
+        this.#query = { ...this.#query, ...query }
         return this
     }
 
-    /**
-     * @private
-     */
-    get findOptions() {
-        return {
-            $limit: this.#limit,
-            $reverse: this.#reverse,
-            $skip: this.#skip
-        }
-    }
-
-    /**
-     * @public
-     */
     get results() {
+        /** @type {Item[]} */
         let tmp = []
         if (this.#joinedResults.length > 0) {
             tmp = this.#joinedResults
@@ -72,40 +63,53 @@ export default class Cursor {
         else {
             tmp = [ ...this.#results ]
         }
+        if (Object.keys(this.#projection).length > 0) {
+            tmp = project(tmp, this.#projection)
+        }
         return tmp
     }
 
-    /**
-     * @public
-     */
     get pointer() {
         return this.#results
     }
 
     /**
-     * @public
+     * @param {boolean} value
+     */
+    reverse(value) {
+        this.#cursorOptions.$reverse = value
+        return this
+    }
+
+    /**
      * @param {number} amount 
      */
     skip(amount) {
-        this.#skip = amount
+        this.#cursorOptions.$skip = amount
         return this
     }
 
     /**
-     * @public
      * @param {number} amount 
      */
     limit(amount) {
-        this.#limit = amount
+        this.#cursorOptions.$limit = amount
         return this
     }
 
     /**
-     * @public
      * @param {Join} join 
      */
     join(join) {
         this.#joins.push(join)
+        return this
+    }
+
+    /**
+     * @param {Projection} projection 
+     */
+    project(projection) {
+        this.#projection = projection
         return this
     }
 
@@ -117,29 +121,18 @@ export default class Cursor {
         this.#joins.map((j, i) => {
             mixes[i] = []
             this.#results.map((item) => mixes[i].push(item[j.where[0]]))
-            promises.push(j.cursor.mixQuery({ [j.where[1]]: { $in: mixes[i] } }).toArray())
+            promises.push(j.cursor.mixQuery({ $intern: [{[j.where[1]]: { $in: mixes[i] }}] }).toArray())
         })
         let res = await Promise.all(promises)
         this.#results.map((item) => {
             join = { ...item }
-            this.#joins.map((j, i) => join[j.as] = { ...res[i].find(_i => join[j.where[0]] === _i[j.where[1]]) })
+            this.#joins.map((j, i) => join[j.as] = res[i].find(_i => join[j.where[0]] === _i[j.where[1]]))
             this.#joinedResults.push(join)
         })
     }
-
-    /**
-     * @public
-     */
-    reverse() {
-        this.#reverse = true
-        return this
-    }
  
-    /**
-     * @public
-     */
     async exec() {
-        this.#results = await find(this.#query, this.#items, this.findOptions)
+        this.#results = await find(this.#query, this.#items, this.#cursorOptions)
         if (this.#joins.length > 0) {
             await this.createJoin()
         }
@@ -147,42 +140,24 @@ export default class Cursor {
     }
 
     /**
-     * @public
+     * @param {number} index 
      */
-    async first() {
+    async single(index) {
         await this.exec()
-        return this.results[0]
+        return this.results[index]
     }
 
     /**
-     * @public
-     */
-    async last() {
-        await this.exec()
-        return this.results[this.results.length - 1]
-    }
-
-    /**
-     * @returns {Promise<any[]>}
+     * @returns {Promise<Item[]>}
      */
     async toArray() {
-        await this.exec()
-        return this.results
+        return (await this.exec()).results
     }
 
     /**
-     * @param {(value: any, index: number, array: any[]) => void} callbackfn
+     * @param {(value: Item, index: number, array: Item[]) => void} callbackfn
      */
-    async forEach(callbackfn) {
-        await this.exec()
-        return this.results.forEach(callbackfn)
-    }
-
-    /**
-     * @param {(value: any, index: number, array: any[]) => void} callbackfn
-     */
-    async map(callbackfn) {
-        await this.exec()
-        return this.results.map(callbackfn)
+    async each(callbackfn) {
+        return (await this.toArray()).forEach(callbackfn)
     }
 }

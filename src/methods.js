@@ -1,14 +1,15 @@
 // @ts-check
 /**
- * @typedef {import("@iljucha/mango-db/lib/types").Item} Item
- * @typedef {import("@iljucha/mango-db/lib/types").Configuration} Configuration
- * @typedef {import("@iljucha/mango-db/lib/types").QueryOption} QueryOption
- * @typedef {import("@iljucha/mango-db/lib/types").Query} Query
- * @typedef {import("@iljucha/mango-db/lib/types").Logic} Logic
- * @typedef {import("@iljucha/mango-db/lib/types").LogicExec} LogicExec
- * @typedef {import("@iljucha/mango-db/lib/types").LogicGates} LogicGates
- * @typedef {import("@iljucha/mango-db/lib/types").CursorOptions} CursorOptions
- * @typedef {import("@iljucha/mango-db/lib/types").LogicGateExec} LogicGateExec
+ * @typedef {import("./types").Projection} Projection
+ * @typedef {import("./types").Item} Item
+ * @typedef {import("./types").Configuration} Configuration
+ * @typedef {import("./types").QueryOption} QueryOption
+ * @typedef {import("./types").Query} Query
+ * @typedef {import("./types").Logic} Logic
+ * @typedef {import("./types").LogicExec} LogicExec
+ * @typedef {import("./types").LogicGates} LogicGates
+ * @typedef {import("./types").CursorOptions} CursorOptions
+ * @typedef {import("./types").LogicGateExec} LogicGateExec
  */
 
 /**
@@ -20,9 +21,13 @@ const LOGICGATES = {
         const keys = Object.keys(query)
         return keys.every(key => logic(query, item, key))
     }),
-
     /** @type {LogicGateExec} */
     $and: (queryArr, item) => queryArr.every(query => {
+        const keys = Object.keys(query)
+        return keys.every(key => logic(query, item, key))
+    }),
+    /** @type {LogicGateExec} */
+    $intern: (queryArr, item) => queryArr.every(query => {
         const keys = Object.keys(query)
         return keys.every(key => logic(query, item, key))
     })
@@ -87,74 +92,19 @@ export function getType(value) {
 }
 
 /**
- * @param {any} value
- * @returns {boolean}
+ * @param {Item} item 
  */
-function isObject(value) {
-    return value !== null && Object.prototype.toString.call(value) === "[object Object]"
-}
-
-/**
- * @param {any} value
- * @returns {boolean}
- */
-function plainObj(value) {
-    return [
-        typeof value === "object",
-        value !== null,
-        !(value instanceof Date),
-        !(value instanceof RegExp),
-        !(Array.isArray(value) && value.length === 0),
-        !(value instanceof Map),
-        !(value instanceof Set)
-    ].every(Boolean)
-}
-
-/**
- * @param {any} obj 
- * @param {string} path
- * @returns {any}
- */
-function flatten(obj, path = null) {
-    /** @type {any} */
-    let value
-    /** @type {string} */
-    let newPath
-    return Object.keys(obj).reduce((acc, key) => {
-        value = obj[key]
-        newPath = [path, key].filter(Boolean).join(".")
-        return isObject(value)
-            ? { ...acc, ...flatten(value, newPath) }
-            : { ...acc, ...{ [newPath]: value } }
-    }, {})
-}
-
-/**
- * @param {any} obj 
- * @returns {any}
- */
-function unflatten(obj) {
-    /** @type {any} */
+function unflatten(item) {
+    /** @type {Item} */
     let result = {}
-    Object.keys(obj).forEach(k => setValue(result, k, obj[k]))
+    let keys
+    let iKeys = Object.keys(item)
+    iKeys.map(key => {
+        keys = key.split(".")
+        keys.reduce((r, e, j) => r[e] || (r[e] = isNaN(Number(keys[j + 1])) ? (keys.length - 1 == j ? item[key] : {}) : []), result)
+    }) 
     return result
-}
-
-/**
- * 
- * @param {any} obj 
- * @param {string} path 
- * @param {void} value 
- */
-function setValue(obj, path, value) {
-    /** @type {string[]} */
-    let way = path.split(".")
-    /** @type {any} */
-    let last = way.pop();
-    way.reduce((pV, cV, cI, arr) => {
-        pV[cV] = pV[cV] || (isFinite(cI + 1 in arr ? arr[cI + 1] : last) ? [] : {})
-    }, obj)[last] = value
-}
+}  
 
 /**
  * @param {any} condition 
@@ -187,16 +137,49 @@ function logic(query, item, key) {
 }
 
 /**
+ * @param {Item} item 
+ */
+function flat(item) {
+    let result = {}, isEmpty, p, i, l
+    let recurseFlat = (cur, prop) => {
+        if (Object(cur) !== cur) {
+            result[prop] = cur
+        }
+        else if (Array.isArray(cur)) {
+            l = cur.length
+            for (i = 0; i < l; i++) {
+                recurseFlat(cur[i], prop + "[" + i + "]")
+            }
+            if (l == 0) {
+                result[prop] = []
+            }
+        }
+        else {
+            isEmpty = true
+            for (p in cur) {
+                isEmpty = false
+                recurseFlat(cur[p], prop ? prop + "." + p : p)
+            }
+            if (isEmpty && prop) {
+                result[prop] = {}
+            }
+        }
+    }
+    recurseFlat(item, "")
+    return result
+}
+
+/**
  * @param {Query} query 
  * @param {Item} item 
  * @param {string[]} keys
  * @returns {boolean}
  */
-function match(query, item, keys) {
+export function match(query, item, keys) {
     /** @type {LogicGateExec} */
     let $logicGate
     /** @type {any} */
-    const copy = flatten({ ...item })
+    const copy = flat(item)
     return keys.every(key => {
         if (query[key] === copy[key]) {
             return true
@@ -214,25 +197,18 @@ function match(query, item, keys) {
     })
 }
 
-/** @type {CursorOptions} */
-const findOptions = {
-    $skip: 0,
-    $limit: Infinity,
-    $reverse: false
-}
-
 /**
  * @param {Query} query
  * @param {Item[]} items
- * @param {CursorOptions} [options]
+ * @param {CursorOptions} options
  * @returns {Promise<Item[]>}
  */
 export async function find(query, items, options) {
-    options = { ...findOptions, ...options }
     let { $limit, $reverse, $skip } = options
     let item, len = items.length
     const results = [], keys = Object.keys(query)
-    let i = $reverse === false ? 0 : (len - 1), skipped = 0
+    let i = $reverse === false ? 0 : (len - 1)
+    let skipped = 0
     if ($limit <= 0) {
         return results
     }
@@ -248,4 +224,46 @@ export async function find(query, items, options) {
         next()
     }
     return results
+}
+
+/**
+ * @param {Item[]} items 
+ * @param {Projection} projection 
+ */
+export function project(items, projection) {
+    const projectionKeys = Object.keys(projection)
+    let unflat = false 
+    let hide = [], show = [], aliases = new Map()
+    projectionKeys.map(key => {
+        if (key.includes(".")) {
+            unflat = true
+        }
+        if (projection[key] === false) {
+            hide.push(key)
+        }
+        if (projection[key] === true) {
+            show.push(key)
+        }
+        if (projection[key]["$alias"]) {
+            hide.push(key)
+            aliases.set(key, projection[key]["$alias"])
+        }
+    })
+    let copy, newItem
+    return items.map(item => {
+        newItem = { ...item }
+        copy = flat(newItem)
+        projectionKeys.map(key => {
+            if (aliases.has(key)) {
+                newItem[aliases.get(key)] = copy[key]
+            }
+            if (hide.includes(key) && newItem[key]) {
+                newItem[key] = undefined
+            }
+            else if (show.includes(key) && newItem[key]) {
+                newItem[key] = copy[key]
+            }
+        })
+        return unflat === true ? unflatten(newItem) : newItem
+    })
 }

@@ -3,6 +3,12 @@
 import Cursor from "./cursor.js"
 export default true
 
+export class Document {
+   constructor(keyValues) {
+      Object.keys(keyValues).forEach(key => this[key] = keyValues[key])
+   }
+}
+
 /** 
  * @typedef {number | string | Date} Comparable
  */
@@ -101,9 +107,19 @@ export default true
  */
 
  /**
-  * @typedef {{
+    @typedef {{
        cursor: Cursor
        where: [string, string]
        as: string
     }} Join
   */
+
+/**
+    @typedef {{
+       $alias: string
+    }} ProjectionOperations
+ */
+
+/**
+ * @typedef {{ [property: string]: boolean | ProjectionOperations }} Projection
+ */

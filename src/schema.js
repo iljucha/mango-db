@@ -3,8 +3,8 @@ import { ERR, TYPE } from "./constants.js"
 import { assert, getType } from "./methods.js"
 
 /**
- * @typedef {import("@iljucha/mango-db/lib/types").SchemeProperties} SchemeProperties
- * @typedef {import("@iljucha/mango-db/lib/types").Item} Item
+ * @typedef {import("./types").SchemeProperties} SchemeProperties
+ * @typedef {import("./types").Item} Item
  */
 
 export class Schema {
